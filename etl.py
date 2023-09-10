@@ -4,28 +4,31 @@ from zipfile import ZipFile
 import json
 import glob
 import os
+import configparser
 import pandas as pd
 import requests
 import dask.dataframe as dd
 import boto3
 
 # ----------------------------------------------------------------
+# Config file
+config = configparser.ConfigParser()
+config.read('dl.cfg')
+
+
+# ----------------------------------------------------------------
 # Prepare source data - unzip data folder to have access to most data sources
-
-
 def prepare_data_sources(current_directory):
     """Unzip folder with source data from 'data' folder of the repository for future use.
 
     Args:
         current_directory: path to the current directory for this PC.
 
-    Output:
-        folder 'data' contain also csv files in addition to archive. 
     """
     print("********* STEP 1 START ************")
     print("Preparing input data sources - unzipping an archive in the 'data' folder.")
     # loading the data.zip and creating a zip object
-    with ZipFile(f'{current_directory}\\data\\data.zip', 'r') as zip_object:
+    with ZipFile(f'{current_directory}\\{config["LOCAL"]["INPUT_DATA"]}', 'r') as zip_object:
         # Extracting all the members of the zip into a specific location.
         zip_object.extractall(
             path=f"{current_directory}\\data")
@@ -42,13 +45,12 @@ def process_units_data(s3, final_directory):
         store the result CSV file first locally and then upload to S3 bucket.
 
     Args:
-        - tba
-    Returns:
-        _type_: _description_
+        - s3: boto3 client for using AWS S3 bucket
+        - final_directory: path to the output of the current ETL pipeline
     """
     print("********* STEP 2 (units) START ************")
-    data_units = pd.read_csv('data/Units.csv')
 
+    data_units = pd.read_csv('data/Units.csv')
     data_units_final = data_units.rename(
         columns={'Unit Name': 'unit_name', 'Description': 'description'})
 
@@ -58,14 +60,21 @@ def process_units_data(s3, final_directory):
 
     # upload file to S3
     s3.upload_file(f'{final_directory}/dim_unit.csv',
-                   'world-data-project', 'dim_unit.csv')
+                   f'{config["AWS"]["OUTPUT_DATA"]}', 'dim_unit.csv')
     print("********* STEP 2 (units) FINISHED ************")
+
 
 # ----------------------------------------------------------------
 # ItemGroup data source
-
-
 def process_item_group_data(s3, final_directory):
+    """Load input 'ItemGroup.csv' data,
+        make transformations and
+        store the result CSV file first locally and then upload to S3 bucket.
+
+    Args:
+        - s3: boto3 client for using AWS S3 bucket
+        - final_directory: path to the output of the current ETL pipeline
+    """
 
     print("********* STEP 3 (item group) START ************")
     data_item_group = pd.read_csv('data/ItemGroup.csv')
@@ -81,14 +90,21 @@ def process_item_group_data(s3, final_directory):
 
     # upload file to S3
     s3.upload_file(f'{final_directory}/dim_item_group.csv',
-                   'world-data-project', 'dim_item_group.csv')
+                   config["AWS"]["OUTPUT_DATA"], 'dim_item_group.csv')
     print("********* STEP 3 (item group) FINISHED ************")
+
 
 # ----------------------------------------------------------------
 # Flags data source
-
-
 def process_flags_data(s3, final_directory):
+    """Load input 'Flags.csv' data,
+        make transformations and
+        store the result CSV file first locally and then upload to S3 bucket.
+
+    Args:
+        - s3: boto3 client for using AWS S3 bucket
+        - final_directory: path to the output of the current ETL pipeline
+    """
 
     print("********* STEP 4 (flags) START ************")
     data_flags = pd.read_csv('data/Flags.csv')
@@ -103,14 +119,21 @@ def process_flags_data(s3, final_directory):
 
     # upload file to S3
     s3.upload_file(f'{final_directory}/dim_flag.csv',
-                   'world-data-project', 'dim_flag.csv')
+                   config["AWS"]["OUTPUT_DATA"], 'dim_flag.csv')
     print("********* STEP 4 (flags) FINISHED ************")
+
 
 # ----------------------------------------------------------------
 # Elements data source
-
-
 def process_elements_data(s3, final_directory):
+    """Load input 'Elements.csv' data,
+        make transformations and
+        store the result CSV file first locally and then upload to S3 bucket.
+
+    Args:
+        - s3: boto3 client for using AWS S3 bucket
+        - final_directory: path to the output of the current ETL pipeline
+    """
 
     print("********* STEP 5 (elements) START ************")
     data_elements = pd.read_csv('data/Elements.csv')
@@ -126,14 +149,21 @@ def process_elements_data(s3, final_directory):
 
     # upload file to S3
     s3.upload_file(f'{final_directory}/dim_element.csv',
-                   'world-data-project', 'dim_element.csv')
+                   config["AWS"]["OUTPUT_DATA"], 'dim_element.csv')
     print("********* STEP 5 (elements) FINISHED ************")
+
 
 # ----------------------------------------------------------------
 # CountryGroup data source
-
-
 def process_country_group_data(s3, final_directory):
+    """Load input 'CountryGroup.csv' data,
+        make transformations and
+        store the result CSV file first locally and then upload to S3 bucket.
+
+    Args:
+        - s3: boto3 client for using AWS S3 bucket
+        - final_directory: path to the output of the current ETL pipeline
+    """
 
     print("********* STEP 6 (country group) START ************")
     data_country_group = pd.read_csv('data/CountryGroup.csv')
@@ -151,14 +181,23 @@ def process_country_group_data(s3, final_directory):
 
     # upload file to S3
     s3.upload_file(f'{final_directory}/dim_country_group.csv',
-                   'world-data-project', 'dim_country_group.csv')
+                   config["AWS"]["OUTPUT_DATA"], 'dim_country_group.csv')
     print("********* STEP 6 (country group) FINISHED ************")
+
 
 # ----------------------------------------------------------------
 # WorldData data source
-
-
 def process_world_file_data(s3, final_directory):
+    """Load input 'WorldData.csv' data,
+        make transformations and
+        store the result CSV file first locally and then upload to S3 bucket.
+        Also creates a list of countries with their unique codes and saves it
+        locally as a separate file.
+
+    Args:
+        - s3: boto3 client for using AWS S3 bucket
+        - final_directory: path to the output of the current ETL pipeline
+    """
 
     print("********* STEP 7 (world data) START ************")
     file_world_data = "data/WorldData.csv"
@@ -189,14 +228,23 @@ def process_world_file_data(s3, final_directory):
 
     # upload file to S3
     s3.upload_file(f'{final_directory}/fact_world_data.csv',
-                   'world-data-project', 'fact_world_data.csv')
+                   config["AWS"]["OUTPUT_DATA"], 'fact_world_data.csv')
     print("********* STEP 7 (world data) FINISHED ************")
+
 
 # ----------------------------------------------------------------
 # API restcountries  data source
-
-
 def process_countries_data(s3, final_directory):
+    """Take file with unique countries codes,
+        connect to API endpoint with countries data using
+        unique countries codes, get information about countries,
+        make transformations and
+        store the result CSV file first locally and then upload to S3 bucket.
+
+    Args:
+        - s3: boto3 client for using AWS S3 bucket
+        - final_directory: path to the output of the current ETL pipeline
+    """
 
     print("********* STEP 8 (API countries) START ************")
     # get the list of countries codes that will be used as a parameter for API calls
@@ -251,17 +299,23 @@ def process_countries_data(s3, final_directory):
 
     # saving result file in S3 bucket
     s3.upload_file(f'{final_directory}/dim_country_info.csv',
-                   'world-data-project', 'dim_country_info.csv')
+                   config["AWS"]["OUTPUT_DATA"], 'dim_country_info.csv')
     print("********* STEP 8 (API countries) FINISHED ************")
 
-# =================================================================
 
+# =================================================================
 # 4.2 Data Quality Checks
 # ----------------------------------------------------------------
-
-
 def quality_checks(s3):
     # ------------------------------------------------------------
+    """Check that each result file is saved locally in the correct folder,
+        and is not empty,
+        and verify that the file is fully uploaded to the 
+        correct AWS S3 bucket.
+
+    Args:
+        - s3: boto3 client for using AWS S3 bucket
+    """
     # data quality checks for dim_unit.csv
     # check that the file is saved in the right directory
     print("********* STEP 9 (quality checks) START ************")
@@ -280,7 +334,7 @@ def quality_checks(s3):
 
     # check that the file is uploaded to S3 bucket
     response = s3.list_objects_v2(
-        Bucket='world-data-project',
+        Bucket=config["AWS"]["OUTPUT_DATA"],
         Prefix='dim_unit.csv',
     )
 
@@ -308,7 +362,7 @@ def quality_checks(s3):
 
     # check that the file is uploaded to S3 bucket
     response = s3.list_objects_v2(
-        Bucket='world-data-project',
+        Bucket=config["AWS"]["OUTPUT_DATA"],
         Prefix='dim_item_group.csv',
     )
 
@@ -336,7 +390,7 @@ def quality_checks(s3):
 
     # check that the file is uploaded to S3 bucket
     response = s3.list_objects_v2(
-        Bucket='world-data-project',
+        Bucket=config["AWS"]["OUTPUT_DATA"],
         Prefix='dim_flag.csv',
     )
 
@@ -364,7 +418,7 @@ def quality_checks(s3):
 
     # check that the file is uploaded to S3 bucket
     response = s3.list_objects_v2(
-        Bucket='world-data-project',
+        Bucket=config["AWS"]["OUTPUT_DATA"],
         Prefix='dim_element.csv',
     )
 
@@ -392,7 +446,7 @@ def quality_checks(s3):
 
     # check that the file is uploaded to S3 bucket
     response = s3.list_objects_v2(
-        Bucket='world-data-project',
+        Bucket=config["AWS"]["OUTPUT_DATA"],
         Prefix='dim_country_group.csv',
     )
 
@@ -420,7 +474,7 @@ def quality_checks(s3):
 
     # check that the file is uploaded to S3 bucket
     response = s3.list_objects_v2(
-        Bucket='world-data-project',
+        Bucket=config["AWS"]["OUTPUT_DATA"],
         Prefix='fact_world_data.csv',
     )
 
@@ -448,7 +502,7 @@ def quality_checks(s3):
 
     # check that the file is uploaded to S3 bucket
     response = s3.list_objects_v2(
-        Bucket='world-data-project',
+        Bucket=config["AWS"]["OUTPUT_DATA"],
         Prefix='dim_country_info.csv',
     )
 
@@ -473,10 +527,11 @@ def main():
 
     """
     current_directory = os.getcwd()
-
+    s3 = boto3.client('s3')
     prepare_data_sources(current_directory)
 
-    s3 = boto3.client('s3')
+    os.environ['AWS_ACCESS_KEY_ID'] = config["AWS"]['AWS_ACCESS_KEY_ID']
+    os.environ['AWS_SECRET_ACCESS_KEY'] = config["AWS"]['AWS_SECRET_ACCESS_KEY']
 
     # creating output folder where the result files will be uploaded
     # current_directory = os.getcwd()
